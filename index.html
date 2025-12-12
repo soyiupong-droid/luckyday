@@ -1,0 +1,213 @@
+odeHtml
+<!DOCTYPE html><html lang="zh-Hant"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>擇日小幫手 (含28宿)</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; padding: 15px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        
+        /* 篩選區塊 */
+        .filter-section { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .filter-title { font-weight: bold; margin: 10px 0 5px; color: #333; font-size: 0.95em; }
+        .filter-group-label { font-size: 0.8em; color: #888; margin-top: 5px; }
+        
+        .btn-group { display: flex; flex-wrap: wrap; gap: 4px; }
+        
+        button {
+            padding: 6px 10px; border: 1px solid #e0e0e0; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px;
+            transition: all 0.2s; flex-grow: 1; text-align: center;
+        }
+        button.active { background: #d32f2f; color: white; border-color: #d32f2f; font-weight: bold; }
+        
+        /* 28宿專用樣式 - 稍微小一點 */
+        .star-btn { flex-grow: 0; min-width: 30px; }
+
+        /* 結果列表 */
+        .result-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .card { background: white; padding: 12px 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #ddd; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        
+        /* 吉凶配色邏輯 */
+        .card.good { border-left-color: #e53935; } 
+        .card.neutral { border-left-color: #fbc02d; }
+        .card.bad { border-left-color: #424242; }
+
+        .date-row { font-size: 1.1em; font-weight: bold; color: #000; }
+        .info-row { font-size: 0.9em; color: #666; margin-top: 3px; }
+        .tag { padding: 2px 6px; border-radius: 4px; font-size: 0.85em; margin-left: 5px; display: inline-block;}
+        .tag-officer { background: #eee; font-weight: bold; }
+        .tag-star { background: #e3f2fd; color: #1565c0; }
+
+        .reset-btn { width: 100%; margin-top: 15px; padding: 10px; background: #455a64; color: white; border: none; font-size: 14px; }
+    </style></head><body>
+<div class="container">
+    <h2 style="text-align:center;">📅 擇日篩選器</h2>
+    
+    <div class="filter-section">
+        <!-- 天干 -->
+        <div class="filter-title">天干 (日):</div>
+        <div class="btn-group" id="stems"></div>
+        
+        <!-- 地支 -->
+        <div class="filter-title">地支 (日):</div>
+        <div class="btn-group" id="branches"></div>
+
+        <!-- 12建星 -->
+        <div class="filter-title">十二建星:</div>
+        <div class="btn-group" id="officers"></div>
+
+        <!-- 28宿 -->
+        <div class="filter-title">二十八宿 (按方位分):</div>
+        <div class="filter-group-label">東方青龍</div>
+        <div class="btn-group" id="stars-east"></div>
+        <div class="filter-group-label">北方玄武</div>
+        <div class="btn-group" id="stars-north"></div>
+        <div class="filter-group-label">西方白虎</div>
+        <div class="btn-group" id="stars-west"></div>
+        <div class="filter-group-label">南方朱雀</div>
+        <div class="btn-group" id="stars-south"></div>
+
+        <button class="reset-btn" onclick="resetFilters()">🔄 重置所有條件</button>
+    </div>
+
+    <div class="result-info">
+        <span id="count" style="font-weight:bold; color:#d32f2f;">載入中...</span>
+    </div>
+    <div id="results"></div></div>
+<script>
+    // ==========================================
+    // 1. 資料區 ( DATA AREA )
+    // 請把你的資料依照此格式貼在下方
+    // ==========================================
+    const almanacData = [
+        // 範例資料 (你需要用Excel生成完整資料取代這裡)
+        { date: "2026/1/1", month: "庚子", day: "辛巳", officer: "建", star: "井宿" },
+        { date: "2026/1/2", month: "庚子", day: "壬午", officer: "除", star: "鬼宿" },
+        { date: "2026/1/3", month: "庚子", day: "癸未", officer: "滿", star: "柳宿" },
+        { date: "2026/1/4", month: "庚子", day: "甲申", officer: "平", star: "星宿" },
+        { date: "2026/1/5", month: "庚子", day: "乙酉", officer: "定", star: "張宿" },
+        { date: "2026/1/6", month: "庚子", day: "丙戌", officer: "執", star: "翼宿" },
+        { date: "2026/1/7", month: "庚子", day: "丁亥", officer: "破", star: "軫宿" },
+        { date: "2026/1/8", month: "辛丑", day: "戊子", officer: "危", star: "角宿" },
+        { date: "2026/1/23", month: "辛丑", day: "癸卯", officer: "成", star: "婁宿" },
+    ];
+
+    // ==========================================
+    // 2. 設定選項
+    // ==========================================
+    const stems = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"];
+    const branches = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
+    const officers = ["建", "除", "滿", "平", "定", "執", "破", "危", "成", "收", "開", "閉"];
+    
+    // 28宿分類
+    const starsEast = ["角", "亢", "氐", "房", "心", "尾", "箕"];
+    const starsNorth = ["斗", "牛", "女", "虛", "危", "室", "壁"];
+    const starsWest = ["奎", "婁", "胃", "昴", "畢", "觜", "參"];
+    const starsSouth = ["井", "鬼", "柳", "星", "張", "翼", "軫"];
+
+    let activeFilters = { stem: null, branch: null, officer: null, star: null };
+
+    // 初始化
+    function init() {
+        createButtons("stems", stems, "stem");
+        createButtons("branches", branches, "branch");
+        createButtons("officers", officers, "officer");
+        
+        // 28宿分開建立
+        createButtons("stars-east", starsEast, "star", true);
+        createButtons("stars-north", starsNorth, "star", true);
+        createButtons("stars-west", starsWest, "star", true);
+        createButtons("stars-south", starsSouth, "star", true);
+
+        renderResults(almanacData);
+    }
+
+    function createButtons(elementId, items, filterType, isStar = false) {
+        const container = document.getElementById(elementId);
+        items.forEach(item => {
+            const btn = document.createElement("button");
+            btn.innerText = item;
+            if(isStar) btn.classList.add("star-btn");
+            btn.onclick = () => toggleFilter(btn, filterType, item, container, isStar);
+            container.appendChild(btn);
+        });
+    }
+
+    // 處理點擊 (包含 28宿 跨區塊互斥邏輯)
+    function toggleFilter(btn, type, value, container, isStar) {
+        const isActive = btn.classList.contains("active");
+        
+        if (isStar) {
+            // 如果點的是星宿，要清除所有星宿區塊(東南西北)的選取狀態
+            document.querySelectorAll(".star-btn").forEach(b => b.classList.remove("active"));
+        } else {
+            // 其他類別只清除自己區塊
+            Array.from(container.children).forEach(b => b.classList.remove("active"));
+        }
+        
+        if (!isActive) {
+            btn.classList.add("active");
+            activeFilters[type] = value;
+        } else {
+            activeFilters[type] = null;
+        }
+        
+        filterData();
+    }
+
+    function resetFilters() {
+        activeFilters = { stem: null, branch: null, officer: null, star: null };
+        document.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+        filterData();
+    }
+
+    function filterData() {
+        const results = almanacData.filter(item => {
+            const matchStem = activeFilters.stem ? item.day.includes(activeFilters.stem) : true;
+            const matchBranch = activeFilters.branch ? item.day.includes(activeFilters.branch) : true;
+            const matchOfficer = activeFilters.officer ? item.officer === activeFilters.officer : true;
+            // 28宿只要字串裡包含該字即可 (例如資料是"井木犴"，選"井"要能選到)
+            const matchStar = activeFilters.star ? item.star.includes(activeFilters.star) : true;
+            
+            return matchStem && matchBranch && matchOfficer && matchStar;
+        });
+        renderResults(results);
+    }
+
+    function renderResults(data) {
+        const container = document.getElementById("results");
+        const countDiv = document.getElementById("count");
+        container.innerHTML = "";
+        countDiv.innerText = `找到 ${data.length} 筆資料`;
+
+        if (data.length === 0) {
+            container.innerHTML = "<div style='text-align:center; color:#999; padding:20px;'>沒有符合的日期</div>";
+            return;
+        }
+
+        data.forEach(item => {
+            // 簡單吉凶配色
+            let statusClass = "bad";
+            if (["建","滿","成","開"].includes(item.officer)) statusClass = "good";
+            else if (["平","定"].includes(item.officer)) statusClass = "neutral";
+            
+            const card = document.createElement("div");
+            card.className = `card ${statusClass}`;
+            card.innerHTML = `
+                <div>
+                    <div class="date-row">${item.date}</div>
+                    <div class="info-row">
+                        ${item.month}月 | ${item.day}日
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <span class="tag tag-officer">${item.officer}</span>
+                    <span class="tag tag-star">${item.star}</span>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    init();</script>
+</body></html>
