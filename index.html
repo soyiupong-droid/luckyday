@@ -1,15 +1,19 @@
-odeHtml
-<!DOCTYPE html><html lang="zh-Hant"><head>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>擇日小幫手 (含28宿)</title>
+    <title>擇日小幫手 (含農曆/節氣/星期/月日干支)</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; padding: 15px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; background: #f0f2f5; padding: 15px; }
         .container { max-width: 600px; margin: 0 auto; }
         
         /* 篩選區塊 */
         .filter-section { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .filter-title { font-weight: bold; margin: 10px 0 5px; color: #333; font-size: 0.95em; }
+        .filter-title { font-weight: bold; margin: 15px 0 5px; color: #333; font-size: 0.95em; border-left: 4px solid #d32f2f; padding-left: 8px; }
+        /* 第一個標題不需要上邊距 */
+        .filter-title:first-of-type { margin-top: 0; }
+        
         .filter-group-label { font-size: 0.8em; color: #888; margin-top: 5px; }
         
         .btn-group { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -18,46 +22,65 @@ odeHtml
             padding: 6px 10px; border: 1px solid #e0e0e0; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px;
             transition: all 0.2s; flex-grow: 1; text-align: center;
         }
-        button.active { background: #d32f2f; color: white; border-color: #d32f2f; font-weight: bold; }
-        
-        /* 28宿專用樣式 - 稍微小一點 */
+        button.active { background: #d32f2f; color: white; border-color: #d32f2f; font-weight: bold; box-shadow: 0 2px 4px rgba(211, 47, 47, 0.3); }
         .star-btn { flex-grow: 0; min-width: 30px; }
 
         /* 結果列表 */
         .result-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .card { background: white; padding: 12px 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #ddd; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .card { background: white; padding: 12px 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #ddd; display: flex; justify-content: space-between; align-items: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         
-        /* 吉凶配色邏輯 */
         .card.good { border-left-color: #e53935; } 
         .card.neutral { border-left-color: #fbc02d; }
         .card.bad { border-left-color: #424242; }
 
-        .date-row { font-size: 1.1em; font-weight: bold; color: #000; }
-        .info-row { font-size: 0.9em; color: #666; margin-top: 3px; }
-        .tag { padding: 2px 6px; border-radius: 4px; font-size: 0.85em; margin-left: 5px; display: inline-block;}
-        .tag-officer { background: #eee; font-weight: bold; }
-        .tag-star { background: #e3f2fd; color: #1565c0; }
+        .date-main { font-size: 1.1em; font-weight: bold; color: #000; display: flex; align-items: center; gap: 8px; }
+        .week-tag { font-size: 0.75em; background: #eee; padding: 1px 5px; border-radius: 4px; font-weight: normal; color: #555; }
+        .week-tag.red { color: #d32f2f; background: #ffebee; } /* 週六日變紅 */
+        
+        .lunar-row { font-size: 0.95em; color: #555; margin-top: 4px; }
+        .info-row { font-size: 0.85em; color: #888; margin-top: 2px; }
 
-        .reset-btn { width: 100%; margin-top: 15px; padding: 10px; background: #455a64; color: white; border: none; font-size: 14px; }
-    </style></head><body>
+        /* 標籤樣式 */
+        .tags-area { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+        .tag { padding: 2px 6px; border-radius: 4px; font-size: 0.85em; display: inline-block; white-space: nowrap;}
+        .tag-officer { background: #eee; font-weight: bold; color: #333; }
+        .tag-star { background: #e3f2fd; color: #1565c0; }
+        
+        /* 節氣與特殊日標籤 */
+        .tag-term { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; font-weight: bold; }
+        .tag-eve { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; font-size: 0.8em; }
+
+        .reset-btn { width: 100%; margin-top: 15px; padding: 10px; background: #455a64; color: white; border: none; font-size: 14px; border-radius: 6px; cursor: pointer;}
+        .reset-btn:hover { background: #37474f; }
+    </style>
+</head>
+<body>
 <div class="container">
-    <h2 style="text-align:center;">📅 擇日篩選器</h2>
+    <h2 style="text-align:center;">📅 擇日篩選器 </h2>
     
     <div class="filter-section">
-        <!-- 天干 -->
-        <div class="filter-title">天干 (日):</div>
-        <div class="btn-group" id="stems"></div>
-        
-        <!-- 地支 -->
-        <div class="filter-title">地支 (日):</div>
-        <div class="btn-group" id="branches"></div>
+        <!-- 新增：月干支篩選 -->
+        <div class="filter-title">天干 (月):</div>
+        <div class="btn-group" id="month-stems"></div>
 
-        <!-- 12建星 -->
-        <div class="filter-title">十二建星:</div>
+        <div class="filter-title">地支 (月):</div>
+        <div class="btn-group" id="month-branches"></div>
+
+        <hr style="border: 0; border-top: 1px dashed #ddd; margin: 15px 0;">
+
+        <!-- 原有：日干支篩選 -->
+        <div class="filter-title">天干 (日):</div>
+        <div class="btn-group" id="day-stems"></div>
+        
+        <div class="filter-title">地支 (日):</div>
+        <div class="btn-group" id="day-branches"></div>
+
+        <hr style="border: 0; border-top: 1px dashed #ddd; margin: 15px 0;">
+
+        <div class="filter-title">十二建星 (預設吉):</div>
         <div class="btn-group" id="officers"></div>
 
-        <!-- 28宿 -->
-        <div class="filter-title">二十八宿 (按方位分):</div>
+        <div class="filter-title">二十八宿 (預設吉):</div>
         <div class="filter-group-label">東方青龍</div>
         <div class="btn-group" id="stars-east"></div>
         <div class="filter-group-label">北方玄武</div>
@@ -67,29 +90,423 @@ odeHtml
         <div class="filter-group-label">南方朱雀</div>
         <div class="btn-group" id="stars-south"></div>
 
-        <button class="reset-btn" onclick="resetFilters()">🔄 重置所有條件</button>
+        <button class="reset-btn" onclick="resetFilters()">🔄 重置 (顯示全部)</button>
     </div>
 
     <div class="result-info">
         <span id="count" style="font-weight:bold; color:#d32f2f;">載入中...</span>
     </div>
-    <div id="results"></div></div>
+    <div id="results"></div>
+</div>
+
 <script>
     // ==========================================
     // 1. 資料區 ( DATA AREA )
-    // 請把你的資料依照此格式貼在下方
     // ==========================================
     const almanacData = [
-        // 範例資料 (你需要用Excel生成完整資料取代這裡)
-        { date: "2026/1/1", month: "庚子", day: "辛巳", officer: "建", star: "井宿" },
-        { date: "2026/1/2", month: "庚子", day: "壬午", officer: "除", star: "鬼宿" },
-        { date: "2026/1/3", month: "庚子", day: "癸未", officer: "滿", star: "柳宿" },
-        { date: "2026/1/4", month: "庚子", day: "甲申", officer: "平", star: "星宿" },
-        { date: "2026/1/5", month: "庚子", day: "乙酉", officer: "定", star: "張宿" },
-        { date: "2026/1/6", month: "庚子", day: "丙戌", officer: "執", star: "翼宿" },
-        { date: "2026/1/7", month: "庚子", day: "丁亥", officer: "破", star: "軫宿" },
-        { date: "2026/1/8", month: "辛丑", day: "戊子", officer: "危", star: "角宿" },
-        { date: "2026/1/23", month: "辛丑", day: "癸卯", officer: "成", star: "婁宿" },
+        // 範例資料：
+{ date: "2026/1/1", month: "庚子", day: "庚辰", officer: "閉", star: "井宿（井木犴）" },
+{ date: "2026/1/2", month: "庚子", day: "辛巳", officer: "建", star: "鬼宿（鬼金羊）" },
+{ date: "2026/1/3", month: "庚子", day: "壬午", officer: "除", star: "柳宿（柳土獐）" },
+{ date: "2026/1/4", month: "庚子", day: "癸未", officer: "滿", star: "星宿（星日马）" },
+{ date: "2026/1/5", month: "庚子", day: "甲申", officer: "滿", star: "張宿（張月鹿）" },
+{ date: "2026/1/6", month: "庚子", day: "乙酉", officer: "平", star: "翼宿（翼火蛇）" },
+{ date: "2026/1/7", month: "庚子", day: "丙戌", officer: "定", star: "軫宿（軫水蚓)" },
+{ date: "2026/1/8", month: "辛丑", day: "丁亥", officer: "執", star: "角宿（角木蛟）" },
+{ date: "2026/1/9", month: "辛丑", day: "戊子", officer: "破", star: "亢宿（亢金龙）" },
+{ date: "2026/1/10", month: "辛丑", day: "己丑", officer: "危", star: "氐宿（氐土貉）" },
+{ date: "2026/1/11", month: "辛丑", day: "庚寅", officer: "成", star: "房宿（房日兔）" },
+{ date: "2026/1/12", month: "辛丑", day: "辛卯", officer: "收", star: "心宿（心月狐）" },
+{ date: "2026/1/13", month: "辛丑", day: "壬辰", officer: "開", star: "尾宿（尾火虎）" },
+{ date: "2026/1/14", month: "辛丑", day: "癸巳", officer: "閉", star: "箕宿（箕水豹）" },
+{ date: "2026/1/15", month: "辛丑", day: "甲午", officer: "建", star: "斗宿（斗木獬）" },
+{ date: "2026/1/16", month: "辛丑", day: "乙未", officer: "除", star: "牛宿" },
+{ date: "2026/1/17", month: "辛丑", day: "丙申", officer: "滿", star: "女宿（女土蝠）" },
+{ date: "2026/1/18", month: "辛丑", day: "丁酉", officer: "平", star: "虚宿（虚日鼠）" },
+{ date: "2026/1/19", month: "辛丑", day: "戊戌", officer: "定", star: "危宿（危月燕）" },
+{ date: "2026/1/20", month: "辛丑", day: "己亥", officer: "執", star: "室宿 (室火猪)" },
+{ date: "2026/1/21", month: "辛丑", day: "庚子", officer: "破", star: "壁宿 (壁水獝)" },
+{ date: "2026/1/22", month: "辛丑", day: "辛丑", officer: "危", star: "奎宿（奎木狼)" },
+{ date: "2026/1/23", month: "辛丑", day: "壬寅", officer: "成", star: "婁宿（婁金狗）" },
+{ date: "2026/1/24", month: "辛丑", day: "癸卯", officer: "收", star: "胃宿（胃土雉)" },
+{ date: "2026/1/25", month: "辛丑", day: "甲辰", officer: "開", star: "昴宿（昴日鸡）" },
+{ date: "2026/1/26", month: "辛丑", day: "乙巳", officer: "閉", star: "畢宿（畢月乌）" },
+{ date: "2026/1/27", month: "辛丑", day: "丙午", officer: "建", star: "觜宿（觜火猴）" },
+{ date: "2026/1/28", month: "辛丑", day: "丁未", officer: "除", star: "参宿（参水猿）" },
+{ date: "2026/1/29", month: "辛丑", day: "戊申", officer: "滿", star: "井宿（井木犴）" },
+{ date: "2026/1/30", month: "辛丑", day: "己酉", officer: "平", star: "鬼宿（鬼金羊）" },
+{ date: "2026/1/31", month: "辛丑", day: "庚戌", officer: "定", star: "柳宿（柳土獐）" },
+{ date: "2026/2/1", month: "辛丑", day: "辛亥", officer: "執", star: "星宿（星日马）" },
+{ date: "2026/2/2", month: "辛丑", day: "壬子", officer: "破", star: "張宿（張月鹿）" },
+{ date: "2026/2/3", month: "辛丑", day: "癸丑", officer: "危", star: "翼宿（翼火蛇）" },
+{ date: "2026/2/4", month: "辛丑", day: "甲寅", officer: "危", star: "軫宿（軫水蚓)" },
+{ date: "2026/2/5", month: "辛丑", day: "乙卯", officer: "成", star: "角宿（角木蛟）" },
+{ date: "2026/2/6", month: "辛丑", day: "丙辰", officer: "收", star: "亢宿（亢金龙）" },
+{ date: "2026/2/7", month: "辛丑", day: "丁巳", officer: "開", star: "氐宿（氐土貉）" },
+{ date: "2026/2/8", month: "辛丑", day: "戊午", officer: "閉", star: "房宿（房日兔）" },
+{ date: "2026/2/9", month: "辛丑", day: "己未", officer: "建", star: "心宿（心月狐）" },
+{ date: "2026/2/10", month: "辛丑", day: "庚申", officer: "除", star: "尾宿（尾火虎）" },
+{ date: "2026/2/11", month: "辛丑", day: "辛酉", officer: "滿", star: "箕宿（箕水豹）" },
+{ date: "2026/2/12", month: "辛丑", day: "壬戌", officer: "平", star: "斗宿（斗木獬）" },
+{ date: "2026/2/13", month: "辛丑", day: "癸亥", officer: "定", star: "牛宿" },
+{ date: "2026/2/14", month: "辛丑", day: "甲子", officer: "執", star: "女宿（女土蝠）" },
+{ date: "2026/2/15", month: "辛丑", day: "乙丑", officer: "破", star: "虚宿（虚日鼠）" },
+{ date: "2026/2/16", month: "辛丑", day: "丙寅", officer: "危", star: "危宿（危月燕）" },
+{ date: "2026/2/17", month: "庚寅", day: "壬戌", officer: "成", star: "室宿 (室火猪)" },
+{ date: "2026/2/18", month: "庚寅", day: "癸亥", officer: "收", star: "壁宿 (壁水獝)" },
+{ date: "2026/2/19", month: "庚寅", day: "甲子", officer: "開", star: "奎宿（奎木狼)" },
+{ date: "2026/2/20", month: "庚寅", day: "乙丑", officer: "閉", star: "婁宿（婁金狗）" },
+{ date: "2026/2/21", month: "庚寅", day: "丙寅", officer: "建", star: "胃宿（胃土雉)" },
+{ date: "2026/2/22", month: "庚寅", day: "丁卯", officer: "除", star: "昴宿（昴日鸡）" },
+{ date: "2026/2/23", month: "庚寅", day: "戊辰", officer: "滿", star: "畢宿（畢月乌）" },
+{ date: "2026/2/24", month: "庚寅", day: "己巳", officer: "平", star: "觜宿（觜火猴）" },
+{ date: "2026/2/25", month: "庚寅", day: "庚午", officer: "定", star: "参宿（参水猿）" },
+{ date: "2026/2/26", month: "庚寅", day: "辛未", officer: "執", star: "井宿（井木犴）" },
+{ date: "2026/2/27", month: "庚寅", day: "壬申", officer: "破", star: "鬼宿（鬼金羊）" },
+{ date: "2026/2/28", month: "庚寅", day: "癸酉", officer: "危", star: "柳宿（柳土獐）" },
+{ date: "2026/3/1", month: "庚寅", day: "甲戌", officer: "成", star: "星宿（星日马）" },
+{ date: "2026/3/2", month: "庚寅", day: "乙亥", officer: "收", star: "張宿（張月鹿）" },
+{ date: "2026/3/3", month: "庚寅", day: "丙子", officer: "開", star: "翼宿（翼火蛇）" },
+{ date: "2026/3/4", month: "庚寅", day: "丁丑", officer: "閉", star: "軫宿（軫水蚓)" },
+{ date: "2026/3/5", month: "庚寅", day: "戊寅", officer: "建", star: "角宿（角木蛟）" },
+{ date: "2026/3/6", month: "庚寅", day: "己卯", officer: "建", star: "亢宿（亢金龙）" },
+{ date: "2026/3/7", month: "庚寅", day: "庚辰", officer: "除", star: "氐宿（氐土貉）" },
+{ date: "2026/3/8", month: "庚寅", day: "辛巳", officer: "滿", star: "房宿（房日兔）" },
+{ date: "2026/3/9", month: "庚寅", day: "壬午", officer: "平", star: "心宿（心月狐）" },
+{ date: "2026/3/10", month: "庚寅", day: "癸未", officer: "定", star: "尾宿（尾火虎）" },
+{ date: "2026/3/11", month: "庚寅", day: "甲申", officer: "執", star: "箕宿（箕水豹）" },
+{ date: "2026/3/12", month: "庚寅", day: "乙酉", officer: "破", star: "斗宿（斗木獬）" },
+{ date: "2026/3/13", month: "庚寅", day: "丙戌", officer: "危", star: "牛宿" },
+{ date: "2026/3/14", month: "庚寅", day: "丁亥", officer: "成", star: "女宿（女土蝠）" },
+{ date: "2026/3/15", month: "庚寅", day: "戊子", officer: "收", star: "虚宿（虚日鼠）" },
+{ date: "2026/3/16", month: "庚寅", day: "己丑", officer: "開", star: "危宿（危月燕）" },
+{ date: "2026/3/17", month: "庚寅", day: "庚寅", officer: "閉", star: "室宿 (室火猪)" },
+{ date: "2026/3/18", month: "庚寅", day: "辛卯", officer: "建", star: "壁宿 (壁水獝)" },
+{ date: "2026/3/19", month: "辛卯", day: "壬辰", officer: "除", star: "奎宿（奎木狼)" },
+{ date: "2026/3/20", month: "辛卯", day: "癸巳", officer: "滿", star: "婁宿（婁金狗）" },
+{ date: "2026/3/21", month: "辛卯", day: "甲午", officer: "平", star: "胃宿（胃土雉)" },
+{ date: "2026/3/22", month: "辛卯", day: "乙未", officer: "定", star: "昴宿（昴日鸡）" },
+{ date: "2026/3/23", month: "辛卯", day: "丙申", officer: "執", star: "畢宿（畢月乌）" },
+{ date: "2026/3/24", month: "辛卯", day: "丁酉", officer: "破", star: "觜宿（觜火猴）" },
+{ date: "2026/3/25", month: "辛卯", day: "戊戌", officer: "危", star: "参宿（参水猿）" },
+{ date: "2026/3/26", month: "辛卯", day: "己亥", officer: "成", star: "井宿（井木犴）" },
+{ date: "2026/3/27", month: "辛卯", day: "庚子", officer: "收", star: "鬼宿（鬼金羊）" },
+{ date: "2026/3/28", month: "辛卯", day: "辛丑", officer: "開", star: "柳宿（柳土獐）" },
+{ date: "2026/3/29", month: "辛卯", day: "壬寅", officer: "閉", star: "星宿（星日马）" },
+{ date: "2026/3/30", month: "辛卯", day: "癸卯", officer: "建", star: "張宿（張月鹿）" },
+{ date: "2026/3/31", month: "辛卯", day: "甲辰", officer: "除", star: "翼宿（翼火蛇）" },
+{ date: "2026/4/1", month: "辛卯", day: "乙巳", officer: "滿", star: "軫宿（軫水蚓)" },
+{ date: "2026/4/2", month: "辛卯", day: "丙午", officer: "平", star: "角宿（角木蛟）" },
+{ date: "2026/4/3", month: "辛卯", day: "丁未", officer: "定", star: "亢宿（亢金龙）" },
+{ date: "2026/4/4", month: "辛卯", day: "戊申", officer: "執", star: "氐宿（氐土貉）" },
+{ date: "2026/4/5", month: "辛卯", day: "己酉", officer: "破", star: "房宿（房日兔）" },
+{ date: "2026/4/6", month: "辛卯", day: "庚戌", officer: "破", star: "心宿（心月狐）" },
+{ date: "2026/4/7", month: "辛卯", day: "辛亥", officer: "危", star: "尾宿（尾火虎）" },
+{ date: "2026/4/8", month: "辛卯", day: "壬子", officer: "成", star: "箕宿（箕水豹）" },
+{ date: "2026/4/9", month: "辛卯", day: "癸丑", officer: "收", star: "斗宿（斗木獬）" },
+{ date: "2026/4/10", month: "辛卯", day: "甲寅", officer: "開", star: "牛宿" },
+{ date: "2026/4/11", month: "辛卯", day: "乙卯", officer: "閉", star: "女宿（女土蝠）" },
+{ date: "2026/4/12", month: "辛卯", day: "丙辰", officer: "建", star: "虚宿（虚日鼠）" },
+{ date: "2026/4/13", month: "辛卯", day: "丁巳", officer: "除", star: "危宿（危月燕）" },
+{ date: "2026/4/14", month: "辛卯", day: "戊午", officer: "滿", star: "室宿 (室火猪)" },
+{ date: "2026/4/15", month: "辛卯", day: "己未", officer: "平", star: "壁宿 (壁水獝)" },
+{ date: "2026/4/16", month: "辛卯", day: "庚申", officer: "定", star: "奎宿（奎木狼)" },
+{ date: "2026/4/17", month: "壬辰", day: "辛酉", officer: "執", star: "婁宿（婁金狗）" },
+{ date: "2026/4/18", month: "壬辰", day: "壬戌", officer: "破", star: "胃宿（胃土雉)" },
+{ date: "2026/4/19", month: "壬辰", day: "癸亥", officer: "危", star: "昴宿（昴日鸡）" },
+{ date: "2026/4/20", month: "壬辰", day: "甲子", officer: "成", star: "畢宿（畢月乌）" },
+{ date: "2026/4/21", month: "壬辰", day: "乙丑", officer: "收", star: "觜宿（觜火猴）" },
+{ date: "2026/4/22", month: "壬辰", day: "丙寅", officer: "開", star: "参宿（参水猿）" },
+{ date: "2026/4/23", month: "壬辰", day: "丁卯", officer: "閉", star: "井宿（井木犴）" },
+{ date: "2026/4/24", month: "壬辰", day: "戊辰", officer: "建", star: "鬼宿（鬼金羊）" },
+{ date: "2026/4/25", month: "壬辰", day: "己巳", officer: "除", star: "柳宿（柳土獐）" },
+{ date: "2026/4/26", month: "壬辰", day: "庚午", officer: "滿", star: "星宿（星日马）" },
+{ date: "2026/4/27", month: "壬辰", day: "辛未", officer: "平", star: "張宿（張月鹿）" },
+{ date: "2026/4/28", month: "壬辰", day: "壬申", officer: "定", star: "翼宿（翼火蛇）" },
+{ date: "2026/4/29", month: "壬辰", day: "癸酉", officer: "執", star: "軫宿（軫水蚓)" },
+{ date: "2026/4/30", month: "壬辰", day: "甲戌", officer: "破", star: "角宿（角木蛟）" },
+{ date: "2026/5/1", month: "壬辰", day: "乙亥", officer: "危", star: "亢宿（亢金龙）" },
+{ date: "2026/5/2", month: "壬辰", day: "丙子", officer: "成", star: "氐宿（氐土貉）" },
+{ date: "2026/5/3", month: "壬辰", day: "丁丑", officer: "收", star: "房宿（房日兔）" },
+{ date: "2026/5/4", month: "壬辰", day: "戊寅", officer: "開", star: "心宿（心月狐）" },
+{ date: "2026/5/5", month: "壬辰", day: "己卯", officer: "閉", star: "尾宿（尾火虎）" },
+{ date: "2026/5/6", month: "壬辰", day: "庚辰", officer: "建", star: "箕宿（箕水豹）" },
+{ date: "2026/5/7", month: "壬辰", day: "辛巳", officer: "建", star: "斗宿（斗木獬）" },
+{ date: "2026/5/8", month: "壬辰", day: "壬午", officer: "除", star: "牛宿" },
+{ date: "2026/5/9", month: "壬辰", day: "癸未", officer: "滿", star: "女宿（女土蝠）" },
+{ date: "2026/5/10", month: "壬辰", day: "甲申", officer: "平", star: "虚宿（虚日鼠）" },
+{ date: "2026/5/11", month: "壬辰", day: "乙酉", officer: "定", star: "危宿（危月燕）" },
+{ date: "2026/5/12", month: "壬辰", day: "丙戌", officer: "執", star: "室宿 (室火猪)" },
+{ date: "2026/5/13", month: "壬辰", day: "丁亥", officer: "破", star: "壁宿 (壁水獝)" },
+{ date: "2026/5/14", month: "壬辰", day: "戊子", officer: "危", star: "奎宿（奎木狼)" },
+{ date: "2026/5/15", month: "壬辰", day: "己丑", officer: "成", star: "婁宿（婁金狗）" },
+{ date: "2026/5/16", month: "壬辰", day: "庚寅", officer: "收", star: "胃宿（胃土雉)" },
+{ date: "2026/5/17", month: "癸巳", day: "辛卯", officer: "開", star: "昴宿（昴日鸡）" },
+{ date: "2026/5/18", month: "癸巳", day: "壬辰", officer: "閉", star: "畢宿（畢月乌）" },
+{ date: "2026/5/19", month: "癸巳", day: "癸巳", officer: "建", star: "觜宿（觜火猴）" },
+{ date: "2026/5/20", month: "癸巳", day: "甲午", officer: "除", star: "参宿（参水猿）" },
+{ date: "2026/5/21", month: "癸巳", day: "乙未", officer: "滿", star: "井宿（井木犴）" },
+{ date: "2026/5/22", month: "癸巳", day: "丙申", officer: "平", star: "鬼宿（鬼金羊）" },
+{ date: "2026/5/23", month: "癸巳", day: "丁酉", officer: "定", star: "柳宿（柳土獐）" },
+{ date: "2026/5/24", month: "癸巳", day: "戊戌", officer: "執", star: "星宿（星日马）" },
+{ date: "2026/5/25", month: "癸巳", day: "己亥", officer: "破", star: "張宿（張月鹿）" },
+{ date: "2026/5/26", month: "癸巳", day: "庚子", officer: "危", star: "翼宿（翼火蛇）" },
+{ date: "2026/5/27", month: "癸巳", day: "辛丑", officer: "成", star: "軫宿（軫水蚓)" },
+{ date: "2026/5/28", month: "癸巳", day: "壬寅", officer: "收", star: "角宿（角木蛟）" },
+{ date: "2026/5/29", month: "癸巳", day: "癸卯", officer: "開", star: "亢宿（亢金龙）" },
+{ date: "2026/5/30", month: "癸巳", day: "甲辰", officer: "閉", star: "氐宿（氐土貉）" },
+{ date: "2026/5/31", month: "癸巳", day: "乙巳", officer: "建", star: "房宿（房日兔）" },
+{ date: "2026/6/1", month: "癸巳", day: "丙午", officer: "除", star: "心宿（心月狐）" },
+{ date: "2026/6/2", month: "癸巳", day: "丁未", officer: "滿", star: "尾宿（尾火虎）" },
+{ date: "2026/6/3", month: "癸巳", day: "戊申", officer: "平", star: "箕宿（箕水豹）" },
+{ date: "2026/6/4", month: "癸巳", day: "己酉", officer: "定", star: "斗宿（斗木獬）" },
+{ date: "2026/6/5", month: "癸巳", day: "庚戌", officer: "執", star: "牛宿" },
+{ date: "2026/6/6", month: "癸巳", day: "辛亥", officer: "破", star: "女宿（女土蝠）" },
+{ date: "2026/6/7", month: "癸巳", day: "壬子", officer: "破", star: "虚宿（虚日鼠）" },
+{ date: "2026/6/8", month: "癸巳", day: "癸丑", officer: "危", star: "危宿（危月燕）" },
+{ date: "2026/6/9", month: "癸巳", day: "甲寅", officer: "成", star: "室宿 (室火猪)" },
+{ date: "2026/6/10", month: "癸巳", day: "乙卯", officer: "收", star: "壁宿 (壁水獝)" },
+{ date: "2026/6/11", month: "癸巳", day: "丙辰", officer: "開", star: "奎宿（奎木狼)" },
+{ date: "2026/6/12", month: "癸巳", day: "丁巳", officer: "閉", star: "婁宿（婁金狗）" },
+{ date: "2026/6/13", month: "癸巳", day: "戊午", officer: "建", star: "胃宿（胃土雉)" },
+{ date: "2026/6/14", month: "癸巳", day: "己未", officer: "除", star: "昴宿（昴日鸡）" },
+{ date: "2026/6/15", month: "甲午", day: "庚申", officer: "滿", star: "畢宿（畢月乌）" },
+{ date: "2026/6/16", month: "甲午", day: "辛酉", officer: "平", star: "觜宿（觜火猴）" },
+{ date: "2026/6/17", month: "甲午", day: "壬戌", officer: "定", star: "参宿（参水猿）" },
+{ date: "2026/6/18", month: "甲午", day: "癸亥", officer: "執", star: "井宿（井木犴）" },
+{ date: "2026/6/19", month: "甲午", day: "甲子", officer: "破", star: "鬼宿（鬼金羊）" },
+{ date: "2026/6/20", month: "甲午", day: "乙丑", officer: "危", star: "柳宿（柳土獐）" },
+{ date: "2026/6/21", month: "甲午", day: "丙寅", officer: "成", star: "星宿（星日马）" },
+{ date: "2026/6/22", month: "甲午", day: "丁卯", officer: "收", star: "張宿（張月鹿）" },
+{ date: "2026/6/23", month: "甲午", day: "戊辰", officer: "開", star: "翼宿（翼火蛇）" },
+{ date: "2026/6/24", month: "甲午", day: "己巳", officer: "閉", star: "軫宿（軫水蚓)" },
+{ date: "2026/6/25", month: "甲午", day: "庚午", officer: "建", star: "角宿（角木蛟）" },
+{ date: "2026/6/26", month: "甲午", day: "辛未", officer: "除", star: "亢宿（亢金龙）" },
+{ date: "2026/6/27", month: "甲午", day: "壬申", officer: "滿", star: "氐宿（氐土貉）" },
+{ date: "2026/6/28", month: "甲午", day: "癸酉", officer: "平", star: "房宿（房日兔）" },
+{ date: "2026/6/29", month: "甲午", day: "甲戌", officer: "定", star: "心宿（心月狐）" },
+{ date: "2026/6/30", month: "甲午", day: "乙亥", officer: "執", star: "尾宿（尾火虎）" },
+{ date: "2026/7/1", month: "甲午", day: "丙子", officer: "破", star: "箕宿（箕水豹）" },
+{ date: "2026/7/2", month: "甲午", day: "丁丑", officer: "危", star: "斗宿（斗木獬）" },
+{ date: "2026/7/3", month: "甲午", day: "戊寅", officer: "成", star: "牛宿" },
+{ date: "2026/7/4", month: "甲午", day: "己卯", officer: "收", star: "女宿（女土蝠）" },
+{ date: "2026/7/5", month: "甲午", day: "庚辰", officer: "開", star: "虚宿（虚日鼠）" },
+{ date: "2026/7/6", month: "甲午", day: "辛巳", officer: "閉", star: "危宿（危月燕）" },
+{ date: "2026/7/7", month: "甲午", day: "壬午", officer: "建", star: "室宿 (室火猪)" },
+{ date: "2026/7/8", month: "甲午", day: "癸未", officer: "除", star: "壁宿 (壁水獝)" },
+{ date: "2026/7/9", month: "甲午", day: "甲申", officer: "除", star: "奎宿（奎木狼)" },
+{ date: "2026/7/10", month: "甲午", day: "乙酉", officer: "滿", star: "婁宿（婁金狗）" },
+{ date: "2026/7/11", month: "甲午", day: "丙戌", officer: "平", star: "胃宿（胃土雉)" },
+{ date: "2026/7/12", month: "甲午", day: "丁亥", officer: "定", star: "昴宿（昴日鸡）" },
+{ date: "2026/7/13", month: "甲午", day: "戊子", officer: "執", star: "畢宿（畢月乌）" },
+{ date: "2026/7/14", month: "乙未", day: "己丑", officer: "破", star: "觜宿（觜火猴）" },
+{ date: "2026/7/15", month: "乙未", day: "庚寅", officer: "危", star: "参宿（参水猿）" },
+{ date: "2026/7/16", month: "乙未", day: "辛卯", officer: "成", star: "井宿（井木犴）" },
+{ date: "2026/7/17", month: "乙未", day: "壬辰", officer: "收", star: "鬼宿（鬼金羊）" },
+{ date: "2026/7/18", month: "乙未", day: "癸巳", officer: "開", star: "柳宿（柳土獐）" },
+{ date: "2026/7/19", month: "乙未", day: "甲午", officer: "閉", star: "星宿（星日马）" },
+{ date: "2026/7/20", month: "乙未", day: "乙未", officer: "建", star: "張宿（張月鹿）" },
+{ date: "2026/7/21", month: "乙未", day: "丙申", officer: "除", star: "翼宿（翼火蛇）" },
+{ date: "2026/7/22", month: "乙未", day: "丁酉", officer: "滿", star: "軫宿（軫水蚓)" },
+{ date: "2026/7/23", month: "乙未", day: "戊戌", officer: "平", star: "角宿（角木蛟）" },
+{ date: "2026/7/24", month: "乙未", day: "己亥", officer: "定", star: "亢宿（亢金龙）" },
+{ date: "2026/7/25", month: "乙未", day: "庚子", officer: "執", star: "氐宿（氐土貉）" },
+{ date: "2026/7/26", month: "乙未", day: "辛丑", officer: "破", star: "房宿（房日兔）" },
+{ date: "2026/7/27", month: "乙未", day: "壬寅", officer: "危", star: "心宿（心月狐）" },
+{ date: "2026/7/28", month: "乙未", day: "癸卯", officer: "成", star: "尾宿（尾火虎）" },
+{ date: "2026/7/29", month: "乙未", day: "甲辰", officer: "收", star: "箕宿（箕水豹）" },
+{ date: "2026/7/30", month: "乙未", day: "乙巳", officer: "開", star: "斗宿（斗木獬）" },
+{ date: "2026/7/31", month: "乙未", day: "丙午", officer: "閉", star: "牛宿" },
+{ date: "2026/8/1", month: "乙未", day: "丁未", officer: "建", star: "女宿（女土蝠）" },
+{ date: "2026/8/2", month: "乙未", day: "戊申", officer: "除", star: "虚宿（虚日鼠）" },
+{ date: "2026/8/3", month: "乙未", day: "己酉", officer: "滿", star: "危宿（危月燕）" },
+{ date: "2026/8/4", month: "乙未", day: "庚戌", officer: "平", star: "室宿 (室火猪)" },
+{ date: "2026/8/5", month: "乙未", day: "辛亥", officer: "定", star: "壁宿 (壁水獝)" },
+{ date: "2026/8/6", month: "乙未", day: "壬子", officer: "執", star: "奎宿（奎木狼)" },
+{ date: "2026/8/7", month: "乙未", day: "癸丑", officer: "破", star: "婁宿（婁金狗）" },
+{ date: "2026/8/8", month: "乙未", day: "甲寅", officer: "危", star: "胃宿（胃土雉)" },
+{ date: "2026/8/9", month: "乙未", day: "乙卯", officer: "危", star: "昴宿（昴日鸡）" },
+{ date: "2026/8/10", month: "乙未", day: "丙辰", officer: "成", star: "畢宿（畢月乌）" },
+{ date: "2026/8/11", month: "乙未", day: "丁巳", officer: "收", star: "觜宿（觜火猴）" },
+{ date: "2026/8/12", month: "乙未", day: "戊午", officer: "開", star: "参宿（参水猿）" },
+{ date: "2026/8/13", month: "丙申", day: "己未", officer: "閉", star: "井宿（井木犴）" },
+{ date: "2026/8/14", month: "丙申", day: "庚申", officer: "建", star: "鬼宿（鬼金羊）" },
+{ date: "2026/8/15", month: "丙申", day: "辛酉", officer: "除", star: "柳宿（柳土獐）" },
+{ date: "2026/8/16", month: "丙申", day: "壬戌", officer: "滿", star: "星宿（星日马）" },
+{ date: "2026/8/17", month: "丙申", day: "癸亥", officer: "平", star: "張宿（張月鹿）" },
+{ date: "2026/8/18", month: "丙申", day: "甲子", officer: "定", star: "翼宿（翼火蛇）" },
+{ date: "2026/8/19", month: "丙申", day: "乙丑", officer: "執", star: "軫宿（軫水蚓)" },
+{ date: "2026/8/20", month: "丙申", day: "丙寅", officer: "破", star: "角宿（角木蛟）" },
+{ date: "2026/8/21", month: "丙申", day: "丁卯", officer: "危", star: "亢宿（亢金龙）" },
+{ date: "2026/8/22", month: "丙申", day: "戊辰", officer: "成", star: "氐宿（氐土貉）" },
+{ date: "2026/8/23", month: "丙申", day: "己巳", officer: "收", star: "房宿（房日兔）" },
+{ date: "2026/8/24", month: "丙申", day: "庚午", officer: "開", star: "心宿（心月狐）" },
+{ date: "2026/8/25", month: "丙申", day: "辛未", officer: "閉", star: "尾宿（尾火虎）" },
+{ date: "2026/8/26", month: "丙申", day: "壬申", officer: "建", star: "箕宿（箕水豹）" },
+{ date: "2026/8/27", month: "丙申", day: "癸酉", officer: "除", star: "斗宿（斗木獬）" },
+{ date: "2026/8/28", month: "丙申", day: "甲戌", officer: "滿", star: "牛宿" },
+{ date: "2026/8/29", month: "丙申", day: "乙亥", officer: "平", star: "女宿（女土蝠）" },
+{ date: "2026/8/30", month: "丙申", day: "丙子", officer: "定", star: "虚宿（虚日鼠）" },
+{ date: "2026/8/31", month: "丙申", day: "丁丑", officer: "執", star: "危宿（危月燕）" },
+{ date: "2026/9/1", month: "丙申", day: "戊寅", officer: "破", star: "室宿 (室火猪)" },
+{ date: "2026/9/2", month: "丙申", day: "己卯", officer: "危", star: "壁宿 (壁水獝)" },
+{ date: "2026/9/3", month: "丙申", day: "庚辰", officer: "成", star: "奎宿（奎木狼)" },
+{ date: "2026/9/4", month: "丙申", day: "辛巳", officer: "收", star: "婁宿（婁金狗）" },
+{ date: "2026/9/5", month: "丙申", day: "壬午", officer: "開", star: "胃宿（胃土雉)" },
+{ date: "2026/9/6", month: "丙申", day: "癸未", officer: "閉", star: "昴宿（昴日鸡）" },
+{ date: "2026/9/7", month: "丙申", day: "甲申", officer: "建", star: "畢宿（畢月乌）" },
+{ date: "2026/9/8", month: "丙申", day: "乙酉", officer: "建", star: "觜宿（觜火猴）" },
+{ date: "2026/9/9", month: "丙申", day: "丙戌", officer: "除", star: "参宿（参水猿）" },
+{ date: "2026/9/10", month: "丙申", day: "丁亥", officer: "滿", star: "井宿（井木犴）" },
+{ date: "2026/9/11", month: "丁酉", day: "戊子", officer: "平", star: "鬼宿（鬼金羊）" },
+{ date: "2026/9/12", month: "丁酉", day: "己丑", officer: "定", star: "柳宿（柳土獐）" },
+{ date: "2026/9/13", month: "丁酉", day: "庚寅", officer: "執", star: "星宿（星日马）" },
+{ date: "2026/9/14", month: "丁酉", day: "辛卯", officer: "破", star: "張宿（張月鹿）" },
+{ date: "2026/9/15", month: "丁酉", day: "壬辰", officer: "危", star: "翼宿（翼火蛇）" },
+{ date: "2026/9/16", month: "丁酉", day: "癸巳", officer: "成", star: "軫宿（軫水蚓)" },
+{ date: "2026/9/17", month: "丁酉", day: "甲午", officer: "收", star: "角宿（角木蛟）" },
+{ date: "2026/9/18", month: "丁酉", day: "乙未", officer: "開", star: "亢宿（亢金龙）" },
+{ date: "2026/9/19", month: "丁酉", day: "丙申", officer: "閉", star: "氐宿（氐土貉）" },
+{ date: "2026/9/20", month: "丁酉", day: "丁酉", officer: "建", star: "房宿（房日兔）" },
+{ date: "2026/9/21", month: "丁酉", day: "戊戌", officer: "除", star: "心宿（心月狐）" },
+{ date: "2026/9/22", month: "丁酉", day: "己亥", officer: "滿", star: "尾宿（尾火虎）" },
+{ date: "2026/9/23", month: "丁酉", day: "庚子", officer: "平", star: "箕宿（箕水豹）" },
+{ date: "2026/9/24", month: "丁酉", day: "辛丑", officer: "定", star: "斗宿（斗木獬）" },
+{ date: "2026/9/25", month: "丁酉", day: "壬寅", officer: "執", star: "牛宿" },
+{ date: "2026/9/26", month: "丁酉", day: "癸卯", officer: "破", star: "女宿（女土蝠）" },
+{ date: "2026/9/27", month: "丁酉", day: "甲辰", officer: "危", star: "虚宿（虚日鼠）" },
+{ date: "2026/9/28", month: "丁酉", day: "乙巳", officer: "成", star: "危宿（危月燕）" },
+{ date: "2026/9/29", month: "丁酉", day: "丙午", officer: "收", star: "室宿 (室火猪)" },
+{ date: "2026/9/30", month: "丁酉", day: "丁未", officer: "開", star: "壁宿 (壁水獝)" },
+{ date: "2026/10/1", month: "丁酉", day: "戊申", officer: "閉", star: "奎宿（奎木狼)" },
+{ date: "2026/10/2", month: "丁酉", day: "己酉", officer: "建", star: "婁宿（婁金狗）" },
+{ date: "2026/10/3", month: "丁酉", day: "庚戌", officer: "除", star: "胃宿（胃土雉)" },
+{ date: "2026/10/4", month: "丁酉", day: "辛亥", officer: "滿", star: "昴宿（昴日鸡）" },
+{ date: "2026/10/5", month: "丁酉", day: "壬子", officer: "平", star: "畢宿（畢月乌）" },
+{ date: "2026/10/6", month: "丁酉", day: "癸丑", officer: "定", star: "觜宿（觜火猴）" },
+{ date: "2026/10/7", month: "丁酉", day: "甲寅", officer: "執", star: "参宿（参水猿）" },
+{ date: "2026/10/8", month: "丁酉", day: "乙卯", officer: "破", star: "井宿（井木犴）" },
+{ date: "2026/10/9", month: "丁酉", day: "丙辰", officer: "破", star: "鬼宿（鬼金羊）" },
+{ date: "2026/10/10", month: "戊戌", day: "丁巳", officer: "危", star: "柳宿（柳土獐）" },
+{ date: "2026/10/11", month: "戊戌", day: "戊午", officer: "成", star: "星宿（星日马）" },
+{ date: "2026/10/12", month: "戊戌", day: "己未", officer: "收", star: "張宿（張月鹿）" },
+{ date: "2026/10/13", month: "戊戌", day: "庚申", officer: "開", star: "翼宿（翼火蛇）" },
+{ date: "2026/10/14", month: "戊戌", day: "辛酉", officer: "閉", star: "軫宿（軫水蚓)" },
+{ date: "2026/10/15", month: "戊戌", day: "壬戌", officer: "建", star: "角宿（角木蛟）" },
+{ date: "2026/10/16", month: "戊戌", day: "癸亥", officer: "除", star: "亢宿（亢金龙）" },
+{ date: "2026/10/17", month: "戊戌", day: "甲子", officer: "滿", star: "氐宿（氐土貉）" },
+{ date: "2026/10/18", month: "戊戌", day: "乙丑", officer: "平", star: "房宿（房日兔）" },
+{ date: "2026/10/19", month: "戊戌", day: "丙寅", officer: "定", star: "心宿（心月狐）" },
+{ date: "2026/10/20", month: "戊戌", day: "丁卯", officer: "執", star: "尾宿（尾火虎）" },
+{ date: "2026/10/21", month: "戊戌", day: "戊辰", officer: "破", star: "箕宿（箕水豹）" },
+{ date: "2026/10/22", month: "戊戌", day: "己巳", officer: "危", star: "斗宿（斗木獬）" },
+{ date: "2026/10/23", month: "戊戌", day: "庚午", officer: "成", star: "牛宿" },
+{ date: "2026/10/24", month: "戊戌", day: "辛未", officer: "收", star: "女宿（女土蝠）" },
+{ date: "2026/10/25", month: "戊戌", day: "壬申", officer: "開", star: "虚宿（虚日鼠）" },
+{ date: "2026/10/26", month: "戊戌", day: "癸酉", officer: "閉", star: "危宿（危月燕）" },
+{ date: "2026/10/27", month: "戊戌", day: "甲戌", officer: "建", star: "室宿 (室火猪)" },
+{ date: "2026/10/28", month: "戊戌", day: "乙亥", officer: "除", star: "壁宿 (壁水獝)" },
+{ date: "2026/10/29", month: "戊戌", day: "丙子", officer: "滿", star: "奎宿（奎木狼)" },
+{ date: "2026/10/30", month: "戊戌", day: "丁丑", officer: "平", star: "婁宿（婁金狗）" },
+{ date: "2026/10/31", month: "戊戌", day: "戊寅", officer: "定", star: "胃宿（胃土雉)" },
+{ date: "2026/11/1", month: "戊戌", day: "己卯", officer: "執", star: "昴宿（昴日鸡）" },
+{ date: "2026/11/2", month: "戊戌", day: "庚辰", officer: "破", star: "畢宿（畢月乌）" },
+{ date: "2026/11/3", month: "戊戌", day: "辛巳", officer: "危", star: "觜宿（觜火猴）" },
+{ date: "2026/11/4", month: "戊戌", day: "壬午", officer: "成", star: "参宿（参水猿）" },
+{ date: "2026/11/5", month: "戊戌", day: "癸未", officer: "收", star: "井宿（井木犴）" },
+{ date: "2026/11/6", month: "戊戌", day: "甲申", officer: "開", star: "鬼宿（鬼金羊）" },
+{ date: "2026/11/7", month: "戊戌", day: "乙酉", officer: "開", star: "柳宿（柳土獐）" },
+{ date: "2026/11/8", month: "戊戌", day: "丙戌", officer: "閉", star: "星宿（星日马）" },
+{ date: "2026/11/9", month: "己亥", day: "丁亥", officer: "建", star: "張宿（張月鹿）" },
+{ date: "2026/11/10", month: "己亥", day: "戊子", officer: "除", star: "翼宿（翼火蛇）" },
+{ date: "2026/11/11", month: "己亥", day: "己丑", officer: "滿", star: "軫宿（軫水蚓)" },
+{ date: "2026/11/12", month: "己亥", day: "庚寅", officer: "平", star: "角宿（角木蛟）" },
+{ date: "2026/11/13", month: "己亥", day: "辛卯", officer: "定", star: "亢宿（亢金龙）" },
+{ date: "2026/11/14", month: "己亥", day: "壬辰", officer: "執", star: "氐宿（氐土貉）" },
+{ date: "2026/11/15", month: "己亥", day: "癸巳", officer: "破", star: "房宿（房日兔）" },
+{ date: "2026/11/16", month: "己亥", day: "甲午", officer: "危", star: "心宿（心月狐）" },
+{ date: "2026/11/17", month: "己亥", day: "乙未", officer: "成", star: "尾宿（尾火虎）" },
+{ date: "2026/11/18", month: "己亥", day: "丙申", officer: "收", star: "箕宿（箕水豹）" },
+{ date: "2026/11/19", month: "己亥", day: "丁酉", officer: "開", star: "斗宿（斗木獬）" },
+{ date: "2026/11/20", month: "己亥", day: "戊戌", officer: "閉", star: "牛宿" },
+{ date: "2026/11/21", month: "己亥", day: "己亥", officer: "建", star: "女宿（女土蝠）" },
+{ date: "2026/11/22", month: "己亥", day: "庚子", officer: "除", star: "虚宿（虚日鼠）" },
+{ date: "2026/11/23", month: "己亥", day: "辛丑", officer: "滿", star: "危宿（危月燕）" },
+{ date: "2026/11/24", month: "己亥", day: "壬寅", officer: "平", star: "室宿 (室火猪)" },
+{ date: "2026/11/25", month: "己亥", day: "癸卯", officer: "定", star: "壁宿 (壁水獝)" },
+{ date: "2026/11/26", month: "己亥", day: "甲辰", officer: "執", star: "奎宿（奎木狼)" },
+{ date: "2026/11/27", month: "己亥", day: "乙巳", officer: "破", star: "婁宿（婁金狗）" },
+{ date: "2026/11/28", month: "己亥", day: "丙午", officer: "危", star: "胃宿（胃土雉)" },
+{ date: "2026/11/29", month: "己亥", day: "丁未", officer: "成", star: "昴宿（昴日鸡）" },
+{ date: "2026/11/30", month: "己亥", day: "戊申", officer: "收", star: "畢宿（畢月乌）" },
+{ date: "2026/12/1", month: "己亥", day: "己酉", officer: "開", star: "觜宿（觜火猴）" },
+{ date: "2026/12/2", month: "己亥", day: "庚戌", officer: "閉", star: "参宿（参水猿）" },
+{ date: "2026/12/3", month: "己亥", day: "辛亥", officer: "建", star: "井宿（井木犴）" },
+{ date: "2026/12/4", month: "己亥", day: "壬子", officer: "除", star: "鬼宿（鬼金羊）" },
+{ date: "2026/12/5", month: "己亥", day: "癸丑", officer: "滿", star: "柳宿（柳土獐）" },
+{ date: "2026/12/6", month: "己亥", day: "甲寅", officer: "平", star: "星宿（星日马）" },
+{ date: "2026/12/7", month: "己亥", day: "乙卯", officer: "平", star: "張宿（張月鹿）" },
+{ date: "2026/12/8", month: "己亥", day: "丙辰", officer: "定", star: "翼宿（翼火蛇）" },
+{ date: "2026/12/9", month: "庚子", day: "丁巳", officer: "執", star: "軫宿（軫水蚓)" },
+{ date: "2026/12/10", month: "庚子", day: "戊午", officer: "破", star: "角宿（角木蛟）" },
+{ date: "2026/12/11", month: "庚子", day: "己未", officer: "危", star: "亢宿（亢金龙）" },
+{ date: "2026/12/12", month: "庚子", day: "庚申", officer: "成", star: "氐宿（氐土貉）" },
+{ date: "2026/12/13", month: "庚子", day: "辛酉", officer: "收", star: "房宿（房日兔）" },
+{ date: "2026/12/14", month: "庚子", day: "壬戌", officer: "開", star: "心宿（心月狐）" },
+{ date: "2026/12/15", month: "庚子", day: "癸亥", officer: "閉", star: "尾宿（尾火虎）" },
+{ date: "2026/12/16", month: "庚子", day: "甲子", officer: "建", star: "箕宿（箕水豹）" },
+{ date: "2026/12/17", month: "庚子", day: "乙丑", officer: "除", star: "斗宿（斗木獬）" },
+{ date: "2026/12/18", month: "庚子", day: "丙寅", officer: "滿", star: "牛宿" },
+{ date: "2026/12/19", month: "庚子", day: "丁卯", officer: "平", star: "女宿（女土蝠）" },
+{ date: "2026/12/20", month: "庚子", day: "戊辰", officer: "定", star: "虚宿（虚日鼠）" },
+{ date: "2026/12/21", month: "庚子", day: "己巳", officer: "執", star: "危宿（危月燕）" },
+{ date: "2026/12/22", month: "庚子", day: "庚午", officer: "破", star: "室宿 (室火猪)" },
+{ date: "2026/12/23", month: "庚子", day: "辛未", officer: "危", star: "壁宿 (壁水獝)" },
+{ date: "2026/12/24", month: "庚子", day: "壬申", officer: "成", star: "奎宿（奎木狼)" },
+{ date: "2026/12/25", month: "庚子", day: "癸酉", officer: "收", star: "婁宿（婁金狗）" },
+{ date: "2026/12/26", month: "庚子", day: "甲戌", officer: "開", star: "胃宿（胃土雉)" },
+{ date: "2026/12/27", month: "庚子", day: "乙亥", officer: "閉", star: "昴宿（昴日鸡）" },
+{ date: "2026/12/28", month: "庚子", day: "丙子", officer: "建", star: "畢宿（畢月乌）" },
+{ date: "2026/12/29", month: "庚子", day: "丁丑", officer: "除", star: "觜宿（觜火猴）" },
+{ date: "2026/12/30", month: "庚子", day: "戊寅", officer: "滿", star: "参宿（参水猿）" },
+{ date: "2026/12/31", month: "庚子", day: "己卯", officer: "平", star: "井宿（井木犴）" },
+{ date: "2027/1/1", month: "庚子", day: "庚辰", officer: "定", star: "鬼宿（鬼金羊）" },
+{ date: "2027/1/2", month: "庚子", day: "辛巳", officer: "執", star: "柳宿（柳土獐）" },
+{ date: "2027/1/3", month: "庚子", day: "壬午", officer: "破", star: "星宿（星日马）" },
+{ date: "2027/1/4", month: "庚子", day: "癸未", officer: "危", star: "張宿（張月鹿）" },
+{ date: "2027/1/5", month: "庚子", day: "甲申", officer: "危", star: "翼宿（翼火蛇）" },
+{ date: "2027/1/6", month: "庚子", day: "乙酉", officer: "成", star: "軫宿（軫水蚓)" },
+{ date: "2027/1/7", month: "庚子", day: "丙戌", officer: "收", star: "角宿（角木蛟）" },
+{ date: "2027/1/8", month: "辛丑", day: "丁亥", officer: "開", star: "亢宿（亢金龙）" },
+{ date: "2027/1/9", month: "辛丑", day: "戊子", officer: "閉", star: "氐宿（氐土貉）" },
+{ date: "2027/1/10", month: "辛丑", day: "己丑", officer: "建", star: "房宿（房日兔）" },
+{ date: "2027/1/11", month: "辛丑", day: "庚寅", officer: "除", star: "心宿（心月狐）" },
+{ date: "2027/1/12", month: "辛丑", day: "辛卯", officer: "滿", star: "尾宿（尾火虎）" },
+{ date: "2027/1/13", month: "辛丑", day: "壬辰", officer: "平", star: "箕宿（箕水豹）" },
+{ date: "2027/1/14", month: "辛丑", day: "癸巳", officer: "定", star: "斗宿（斗木獬）" },
+{ date: "2027/1/15", month: "辛丑", day: "甲午", officer: "執", star: "牛宿" },
+{ date: "2027/1/16", month: "辛丑", day: "乙未", officer: "破", star: "女宿（女土蝠）" },
+{ date: "2027/1/17", month: "辛丑", day: "丙申", officer: "危", star: "虚宿（虚日鼠）" },
+{ date: "2027/1/18", month: "辛丑", day: "丁酉", officer: "成", star: "危宿（危月燕）" },
+{ date: "2027/1/19", month: "辛丑", day: "戊戌", officer: "收", star: "室宿 (室火猪)" },
+{ date: "2027/1/20", month: "辛丑", day: "己亥", officer: "開", star: "壁宿 (壁水獝)" },
+{ date: "2027/1/21", month: "辛丑", day: "庚子", officer: "閉", star: "奎宿（奎木狼)" },
+{ date: "2027/1/22", month: "辛丑", day: "辛丑", officer: "建", star: "婁宿（婁金狗）" },
+{ date: "2027/1/23", month: "辛丑", day: "壬寅", officer: "除", star: "胃宿（胃土雉)" },
+{ date: "2027/1/24", month: "辛丑", day: "癸卯", officer: "滿", star: "昴宿（昴日鸡）" },
+{ date: "2027/1/25", month: "辛丑", day: "甲辰", officer: "平", star: "畢宿（畢月乌）" },
+{ date: "2027/1/26", month: "辛丑", day: "乙巳", officer: "定", star: "觜宿（觜火猴）" },
+{ date: "2027/1/27", month: "辛丑", day: "丙午", officer: "執", star: "参宿（参水猿）" },
+{ date: "2027/1/28", month: "辛丑", day: "丁未", officer: "破", star: "井宿（井木犴）" },
+{ date: "2027/1/29", month: "辛丑", day: "戊申", officer: "危", star: "鬼宿（鬼金羊）" },
+{ date: "2027/1/30", month: "辛丑", day: "己酉", officer: "成", star: "柳宿（柳土獐）" },
+{ date: "2027/1/31", month: "辛丑", day: "庚戌", officer: "收", star: "星宿（星日马）" },
+{ date: "2027/2/1", month: "辛丑", day: "辛亥", officer: "開", star: "張宿（張月鹿）" },
+{ date: "2027/2/2", month: "辛丑", day: "壬子", officer: "閉", star: "翼宿（翼火蛇）" },
+{ date: "2027/2/3", month: "辛丑", day: "癸丑", officer: "建", star: "軫宿（軫水蚓)" },
+{ date: "2027/2/4", month: "辛丑", day: "甲寅", officer: "建", star: "角宿（角木蛟）" },
+{ date: "2027/2/5", month: "辛丑", day: "乙卯", officer: "除", star: "亢宿（亢金龙）" },	
+        
     ];
 
     // ==========================================
@@ -102,74 +519,100 @@ odeHtml
     // 28宿分類
     const starsEast = ["角", "亢", "氐", "房", "心", "尾", "箕"];
     const starsNorth = ["斗", "牛", "女", "虛", "危", "室", "壁"];
-    const starsWest = ["奎", "婁", "胃", "昴", "畢", "觜", "參"];
+    const starsWest = ["奎", "婁", "胃", "昴", "畢", "觜", "参"];
     const starsSouth = ["井", "鬼", "柳", "星", "張", "翼", "軫"];
 
-    let activeFilters = { stem: null, branch: null, officer: null, star: null };
+    // 狀態管理：多選
+    let activeFilters = { 
+        monthStem: [],   // 新增：月天干
+        monthBranch: [], // 新增：月地支
+        dayStem: [],     // 改名：日天干 (原 stem)
+        dayBranch: [],   // 改名：日地支 (原 branch)
+        officer: ["除", "滿", "定", "執", "危", "成", "開"], 
+        star: ["室", "壁", "婁", "胃", "畢", "参", "井", "張", "軫", "角", "房", "尾", "箕", "斗"] 
+    };
 
-    // 初始化
     function init() {
-        createButtons("stems", stems, "stem");
-        createButtons("branches", branches, "branch");
+        // 建立月干支按鈕
+        createButtons("month-stems", stems, "monthStem");
+        createButtons("month-branches", branches, "monthBranch");
+
+        // 建立日干支按鈕
+        createButtons("day-stems", stems, "dayStem");
+        createButtons("day-branches", branches, "dayBranch");
+
+        // 建立其他按鈕
         createButtons("officers", officers, "officer");
-        
-        // 28宿分開建立
         createButtons("stars-east", starsEast, "star", true);
         createButtons("stars-north", starsNorth, "star", true);
         createButtons("stars-west", starsWest, "star", true);
         createButtons("stars-south", starsSouth, "star", true);
 
-        renderResults(almanacData);
+        filterData();
     }
 
     function createButtons(elementId, items, filterType, isStar = false) {
         const container = document.getElementById(elementId);
+        if (!container) return; // 安全檢查
+
         items.forEach(item => {
             const btn = document.createElement("button");
             btn.innerText = item;
             if(isStar) btn.classList.add("star-btn");
-            btn.onclick = () => toggleFilter(btn, filterType, item, container, isStar);
+            if (activeFilters[filterType].includes(item)) {
+                btn.classList.add("active");
+            }
+            btn.onclick = () => toggleFilter(btn, filterType, item);
             container.appendChild(btn);
         });
     }
 
-    // 處理點擊 (包含 28宿 跨區塊互斥邏輯)
-    function toggleFilter(btn, type, value, container, isStar) {
-        const isActive = btn.classList.contains("active");
-        
-        if (isStar) {
-            // 如果點的是星宿，要清除所有星宿區塊(東南西北)的選取狀態
-            document.querySelectorAll(".star-btn").forEach(b => b.classList.remove("active"));
-        } else {
-            // 其他類別只清除自己區塊
-            Array.from(container.children).forEach(b => b.classList.remove("active"));
-        }
-        
-        if (!isActive) {
-            btn.classList.add("active");
-            activeFilters[type] = value;
-        } else {
-            activeFilters[type] = null;
-        }
-        
+    function toggleFilter(btn, type, value) {
+        btn.classList.toggle("active");
+        const index = activeFilters[type].indexOf(value);
+        if (index > -1) activeFilters[type].splice(index, 1);
+        else activeFilters[type].push(value);
         filterData();
     }
 
     function resetFilters() {
-        activeFilters = { stem: null, branch: null, officer: null, star: null };
+        activeFilters = { 
+            monthStem: [], monthBranch: [], 
+            dayStem: [], dayBranch: [], 
+            officer: [], star: [] 
+        };
         document.querySelectorAll("button").forEach(b => b.classList.remove("active"));
         filterData();
     }
 
+    // 取得星期幾
+    function getWeekDay(dateString) {
+        const days = ["日", "一", "二", "三", "四", "五", "六"];
+        const d = new Date(dateString);
+        return days[d.getDay()];
+    }
+
     function filterData() {
         const results = almanacData.filter(item => {
-            const matchStem = activeFilters.stem ? item.day.includes(activeFilters.stem) : true;
-            const matchBranch = activeFilters.branch ? item.day.includes(activeFilters.branch) : true;
-            const matchOfficer = activeFilters.officer ? item.officer === activeFilters.officer : true;
-            // 28宿只要字串裡包含該字即可 (例如資料是"井木犴"，選"井"要能選到)
-            const matchStar = activeFilters.star ? item.star.includes(activeFilters.star) : true;
+            // 篩選月天干 (檢查 item.month 是否包含該天干)
+            const matchMonthStem = activeFilters.monthStem.length === 0 || activeFilters.monthStem.some(s => item.month.includes(s));
             
-            return matchStem && matchBranch && matchOfficer && matchStar;
+            // 篩選月地支 (檢查 item.month 是否包含該地支)
+            const matchMonthBranch = activeFilters.monthBranch.length === 0 || activeFilters.monthBranch.some(b => item.month.includes(b));
+
+            // 篩選日天干
+            const matchDayStem = activeFilters.dayStem.length === 0 || activeFilters.dayStem.some(s => item.day.includes(s));
+            
+            // 篩選日地支
+            const matchDayBranch = activeFilters.dayBranch.length === 0 || activeFilters.dayBranch.some(b => item.day.includes(b));
+            
+            // 篩選建星
+            const matchOfficer = activeFilters.officer.length === 0 || activeFilters.officer.includes(item.officer);
+            
+            // 篩選星宿
+            const matchStar = activeFilters.star.length === 0 || activeFilters.star.some(s => item.star.includes(s));
+
+            return matchMonthStem && matchMonthBranch && matchDayStem && matchDayBranch && matchOfficer && matchStar;
         });
         renderResults(results);
     }
@@ -178,36 +621,72 @@ odeHtml
         const container = document.getElementById("results");
         const countDiv = document.getElementById("count");
         container.innerHTML = "";
-        countDiv.innerText = `找到 ${data.length} 筆資料`;
+        countDiv.innerText = `符合條件： ${data.length} 筆資料`;
 
         if (data.length === 0) {
             container.innerHTML = "<div style='text-align:center; color:#999; padding:20px;'>沒有符合的日期</div>";
             return;
         }
 
-        data.forEach(item => {
-            // 簡單吉凶配色
+        data.forEach((item) => {
+            const weekDay = getWeekDay(item.date);
+            const isWeekend = (weekDay === "六" || weekDay === "日");
+            
+            // 判斷吉凶顏色
             let statusClass = "bad";
             if (["建","滿","成","開"].includes(item.officer)) statusClass = "good";
             else if (["平","定"].includes(item.officer)) statusClass = "neutral";
             
+            // 判斷節氣前一日
+            let isTermEve = false;
+            let nextTermName = "";
+            
+            const originalIndex = almanacData.indexOf(item);
+            if (originalIndex !== -1 && originalIndex < almanacData.length - 1) {
+                const nextDayItem = almanacData[originalIndex + 1];
+                if (nextDayItem.term && nextDayItem.term !== "") {
+                    isTermEve = true;
+                    nextTermName = nextDayItem.term;
+                }
+            }
+
+            // 組裝 HTML
             const card = document.createElement("div");
             card.className = `card ${statusClass}`;
+            
+            let tagsHtml = `
+                <span class="tag tag-officer">${item.officer}</span>
+                <span class="tag tag-star">${item.star}</span>
+            `;
+            if (item.term) {
+                tagsHtml += `<br><span class="tag tag-term">★ ${item.term}</span>`;
+            }
+            if (isTermEve) {
+                tagsHtml += `<br><span class="tag tag-eve">⚠️ ${nextTermName}前一日</span>`;
+            }
+
+            const lunarText = item.lunar ? `農曆：${item.lunar}` : "";
+
             card.innerHTML = `
                 <div>
-                    <div class="date-row">${item.date}</div>
+                    <div class="date-main">
+                        ${item.date} 
+                        <span class="week-tag ${isWeekend ? 'red' : ''}">週${weekDay}</span>
+                    </div>
+                    <div class="lunar-row">${lunarText}</div>
                     <div class="info-row">
-                        ${item.month}月 | ${item.day}日
+                        月：${item.month} | 日：${item.day}
                     </div>
                 </div>
-                <div style="text-align:right;">
-                    <span class="tag tag-officer">${item.officer}</span>
-                    <span class="tag tag-star">${item.star}</span>
+                <div class="tags-area">
+                    ${tagsHtml}
                 </div>
             `;
             container.appendChild(card);
         });
     }
 
-    init();</script>
-</body></html>
+    init();
+</script>
+</body>
+</html>
